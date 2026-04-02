@@ -135,7 +135,9 @@ async function claimDailyBonus(telegramId) {
     }
 
     const now = new Date();
-    const lastBonus = user.last_daily_bonus_at ? new Date(user.last_daily_bonus_at) : null;
+    const lastBonus = user.last_daily_bonus_at
+      ? new Date(user.last_daily_bonus_at)
+      : null;
 
     if (lastBonus) {
       const sameDay =

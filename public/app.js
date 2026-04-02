@@ -5,9 +5,13 @@ if (tg) {
   tg.expand();
 
   try {
-    tg.setHeaderColor('#111111');
-    tg.setBackgroundColor('#111111');
+    tg.setHeaderColor('#0b0b0f');
+    tg.setBackgroundColor('#0b0b0f');
   } catch (e) {}
+
+  if (typeof tg.disableVerticalSwipes === 'function') {
+    tg.disableVerticalSwipes();
+  }
 }
 
 let currentUser = null;
@@ -25,6 +29,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (telegramUser?.first_name) {
     welcomeTitle.textContent = `Bienvenido, ${telegramUser.first_name}`;
+  } else {
+    welcomeTitle.textContent = 'Bienvenido al Arcade';
   }
 
   async function registerOrLoadUser() {
@@ -34,8 +40,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      // OJO:
-      // Cambia esta URL por la URL de tu backend que ya usa Supabase
       const res = await fetch('https://botneflixtelegram.fly.dev/api/auth/telegram', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,6 +55,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (data.ok) {
         currentUser = data.user;
         updateBalance(data.user.coins || 0);
+      } else {
+        console.error('Error cargando usuario:', data.error);
       }
     } catch (error) {
       console.error('Error registrando/cargando usuario:', error);

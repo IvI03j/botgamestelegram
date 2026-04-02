@@ -12,6 +12,9 @@ const MOVIES_BOT_URL = process.env.MOVIES_BOT_URL;
 const OFFICIAL_WEB_URL = process.env.OFFICIAL_WEB_URL;
 const PORT = process.env.PORT || 8080;
 
+const DOUBLE_GAME_COST = 1;
+const DAILY_BONUS_REWARD = 3;
+
 if (!BOT_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error('Faltan BOT_TOKEN, SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY');
   process.exit(1);
@@ -121,8 +124,6 @@ async function getUserBalance(telegramId) {
 // =========================
 async function claimDailyBonus(telegramId) {
   try {
-    const DAILY_BONUS_REWARD = 3;
-
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
@@ -187,6 +188,104 @@ async function claimDailyBonus(telegramId) {
     return { ok: false, error: 'Error interno reclamando bonus' };
   }
 }
+
+// =========================
+// DOBLE O NADA
+// =========================
+app.post('/api/double-or-nothing', async (req, res) => {
+  try {
+    const { telegram_id } = req.body;
+
+    if (!telegram_id) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Falta telegram_id'
+      });
+    }
+
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegram_id)
+      .maybeSingle();
+
+    if (userError) {
+      console.error('Error buscando usuario en doble o nada:', userError.message);
+      return res.status(500).json({
+        ok: false,
+        error: 'Error buscando usuario'
+      });
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    if (user.coins < DOUBLE_GAME_COST) {
+      return res.status(400).json({
+        ok: false,
+        error: 'No tienes monedas suficientes para jugar',
+        balance: user.coins
+      });
+    }
+
+    const win = Math.random() < 0.5;
+
+    let newBalance = user.coins - DOUBLE_GAME_COST;
+    let reward = 0;
+
+    if (win) {
+      reward = 2;
+      newBalance += reward;
+    }
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        coins: newBalance,
+        updated_at: new Date().toISOString()
+      })
+      .eq('telegram_id', telegram_id);
+
+    if (updateError) {
+      console.error('Error actualizando saldo en doble o nada:', updateError.message);
+      return res.status(500).json({
+        ok: false,
+        error: 'No se pudo actualizar el saldo'
+      });
+    }
+
+    await supabase.from('transactions').insert([
+      {
+        telegram_id,
+        type: win ? 'double_win' : 'double_lose',
+        amount: win ? 1 : -1,
+        description: win ? 'Ganó en doble o nada' : 'Perdió en doble o nada',
+        source: 'games_webapp'
+      }
+    ]);
+
+    return res.json({
+      ok: true,
+      win,
+      reward,
+      cost: DOUBLE_GAME_COST,
+      balance: newBalance,
+      message: win
+        ? `🎉 Has ganado. Recibes ${reward} monedas`
+        : '💥 Has perdido tu moneda'
+    });
+  } catch (error) {
+    console.error('Error en /api/double-or-nothing:', error.message);
+    return res.status(500).json({
+      ok: false,
+      error: 'Error interno del servidor'
+    });
+  }
+});
 
 // =========================
 // API PARA WEBAPPS

@@ -27,6 +27,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const telegramUser = tg?.initDataUnsafe?.user;
 
+  // CAMBIA ESTA URL SI TU BACKEND REAL ES OTRO
+  const API_BASE = 'https://botneflixtelegram.fly.dev';
+
   if (telegramUser?.first_name) {
     welcomeTitle.textContent = `Bienvenido, ${telegramUser.first_name}`;
   } else {
@@ -40,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      const res = await fetch('https://botneflixtelegram.fly.dev/api/auth/telegram', {
+      const res = await fetch(`${API_BASE}/api/auth/telegram`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -67,7 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       if (!telegramUser?.id) return;
 
-      const res = await fetch(`https://botneflixtelegram.fly.dev/api/balance/${telegramUser.id}`);
+      const res = await fetch(`${API_BASE}/api/balance/${telegramUser.id}`);
       const data = await res.json();
 
       if (data.ok) {
@@ -83,15 +86,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   dailyBonusBtn.addEventListener('click', () => {
-    alert('🎁 Próximamente: bonus diario conectado a monedas reales');
+    alert('🎁 Próximamente: bonus diario con monedas reales');
   });
 
   rouletteBtn.addEventListener('click', () => {
-    alert('🎡 Próximamente: ruleta');
+    alert('🎡 Próximamente: ruleta diaria');
   });
 
   quizBtn.addEventListener('click', () => {
-    alert('🎬 Próximamente: quiz de películas');
+    alert('🎬 Próximamente: quiz por niveles');
   });
 
   doubleBtn.addEventListener('click', () => {

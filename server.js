@@ -189,97 +189,7 @@ async function claimDailyBonus(telegramId) {
 }
 
 // =========================
-// API PARA WEBAPPS
-// =========================
-app.post('/api/auth/telegram', async (req, res) => {
-  try {
-    const { telegram_id, username, first_name } = req.body;
-
-    if (!telegram_id) {
-      return res.status(400).json({ ok: false, error: 'Falta telegram_id' });
-    }
-
-    const { data: existingUser, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('telegram_id', telegram_id)
-      .maybeSingle();
-
-    if (error) {
-      return res.status(500).json({ ok: false, error: 'Error buscando usuario' });
-    }
-
-    if (existingUser) {
-      return res.json({ ok: true, user: existingUser });
-    }
-
-    const { data: newUser, error: insertError } = await supabase
-      .from('users')
-      .insert([
-        {
-          telegram_id,
-          username: username || null,
-          first_name: first_name || null,
-          coins: 0
-        }
-      ])
-      .select()
-      .single();
-
-    if (insertError) {
-      return res.status(500).json({ ok: false, error: 'Error creando usuario' });
-    }
-
-    return res.json({ ok: true, user: newUser });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ ok: false, error: 'Error interno' });
-  }
-});
-
-app.get('/api/balance/:telegramId', async (req, res) => {
-  try {
-    const telegramId = req.params.telegramId;
-
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('coins, premium_until')
-      .eq('telegram_id', telegramId)
-      .maybeSingle();
-
-    if (error || !user) {
-      return res.status(404).json({ ok: false, error: 'Usuario no encontrado' });
-    }
-
-    return res.json({
-      ok: true,
-      balance: user.coins,
-      premium_until: user.premium_until
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ ok: false, error: 'Error interno' });
-  }
-});
-
-app.post('/api/daily-bonus', async (req, res) => {
-  try {
-    const { telegram_id } = req.body;
-    const result = await claimDailyBonus(telegram_id);
-
-    if (!result.ok) {
-      return res.status(400).json(result);
-    }
-
-    return res.json(result);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ ok: false, error: 'Error interno' });
-  }
-});
-
-// =========================
-// TECLADO PRINCIPAL SEGURO
+// TECLADO PRINCIPAL
 // =========================
 function buildMainKeyboard() {
   const rows = [];
@@ -348,7 +258,6 @@ Accede desde aquí a todo tu ecosistema.`;
 // =========================
 bot.start(async (ctx) => {
   try {
-    console.log('Se recibió /start de:', ctx.from?.id);
     await registerUserIfNeeded(ctx);
     await sendMainMenu(ctx);
   } catch (error) {

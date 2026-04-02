@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  >
+  <title>Arcade Ofica</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div>
+        <h1>🎮 Arcade Ofica</h1>
+        <p>Juega y gana monedas</p>
+      </div>
+      <div class="balance-box">
+        💰 <span id="balanceValue">0</span>
+      </div>
+    </header>
+
+    <main class="content">
+      <section class="welcome-card">
+        <h2 id="welcomeTitle">Bienvenido</h2>
+        <p>Elige un juego y gana monedas para usar en el catálogo o en la web premium.</p>
+      </section>
+
+      <section class="games-grid">
+        <article class="game-card">
+          <h3>🎁 Bonus diario</h3>
+          <p>Reclama tu recompensa diaria.</p>
+          <button id="dailyBonusBtn">Reclamar</button>
+        </article>
+
+        <article class="game-card">
+          <h3>🎡 Ruleta</h3>
+          <p>Gira la ruleta para ganar monedas.</p>
+          <button id="rouletteBtn">Jugar</button>
+        </article>
+
+        <article class="game-card">
+          <h3>🎬 Quiz de películas</h3>
+          <p>Responde preguntas y sube de nivel.</p>
+          <button id="quizBtn">Jugar</button>
+        </article>
+
+        <article class="game-card">
+          <h3>💥 Doble o nada</h3>
+          <p>Arriesga tus monedas para ganar más.</p>
+          <button id="doubleBtn">Jugar</button>
+        </article>
+
+        <article class="game-card disabled">
+          <h3>🧠 Memory</h3>
+          <p>Encuentra parejas de cartas.</p>
+          <button disabled>Próximamente</button>
+        </article>
+
+        <article class="game-card disabled">
+          <h3>🧩 Puzzle</h3>
+          <p>Ordena piezas y supera niveles.</p>
+          <button disabled>Próximamente</button>
+        </article>
+      </section>
+
+      <section class="info-box">
+        <h3>ℹ️ ¿Para qué sirven las monedas?</h3>
+        <p>
+          Puedes usar tus monedas para ver películas concretas en Telegram
+          o para desbloquear acceso premium en la web oficial.
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

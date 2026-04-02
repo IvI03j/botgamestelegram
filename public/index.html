@@ -17,7 +17,7 @@
         <div class="brand-badge">🎮</div>
         <div>
           <h1>Arcade Ofica</h1>
-          <p>Juega, gana monedas y desbloquea contenido</p>
+          <p>Juega, gana monedas y arriesga para multiplicarlas</p>
         </div>
       </div>
 
@@ -33,10 +33,11 @@
           <span class="hero-label">CENTRO DE JUEGOS</span>
           <h2 id="welcomeTitle">Bienvenido</h2>
           <p>
-            Supera retos, gana monedas y úsalas para ver películas en Telegram
-            o desbloquear acceso premium en la web oficial.
+            Supera retos, consigue monedas y úsala en el catálogo Telegram
+            o en la experiencia premium de la web oficial.
           </p>
         </div>
+
         <div class="hero-side">
           <div class="hero-mini-card">
             <span class="mini-label">Estado</span>
@@ -45,87 +46,128 @@
         </div>
       </section>
 
-      <section class="section-title-row">
-        <h3>Juegos disponibles</h3>
-        <span class="section-subtitle">Elige cómo ganar o arriesgar monedas</span>
+      <section class="section-block">
+        <div class="section-header">
+          <div>
+            <h3>🟢 Ganar monedas</h3>
+            <p>
+              Juegos de progreso, niveles y recompensas. Aquí sí podrán aparecer anuncios
+              o mecánicas de recompensa.
+            </p>
+          </div>
+        </div>
+
+        <div class="games-grid">
+          <article class="game-card earn featured">
+            <div class="game-top">
+              <span class="game-tag reward">RECOMPENSA</span>
+              <span class="game-icon">🎁</span>
+            </div>
+            <h3>Bonus diario</h3>
+            <p>Reclama una recompensa cada día para aumentar tu saldo.</p>
+            <button id="dailyBonusBtn" class="game-btn">Reclamar bonus</button>
+          </article>
+
+          <article class="game-card earn">
+            <div class="game-top">
+              <span class="game-tag quiz">NIVELES</span>
+              <span class="game-icon">🎬</span>
+            </div>
+            <h3>Quiz de películas</h3>
+            <p>Responde preguntas, avanza de nivel y consigue monedas.</p>
+            <button id="quizBtn" class="game-btn secondary">Jugar quiz</button>
+          </article>
+
+          <article class="game-card earn">
+            <div class="game-top">
+              <span class="game-tag luck">RECOMPENSA</span>
+              <span class="game-icon">🎡</span>
+            </div>
+            <h3>Ruleta diaria</h3>
+            <p>Gira una vez al día para conseguir una recompensa aleatoria.</p>
+            <button id="rouletteBtn" class="game-btn secondary">Girar ruleta</button>
+          </article>
+
+          <article class="game-card earn disabled">
+            <div class="game-top">
+              <span class="game-tag soon">PRÓXIMAMENTE</span>
+              <span class="game-icon">🧠</span>
+            </div>
+            <h3>Memory</h3>
+            <p>Encuentra parejas y supera niveles cada vez más difíciles.</p>
+            <button disabled class="game-btn disabled-btn">Muy pronto</button>
+          </article>
+
+          <article class="game-card earn disabled">
+            <div class="game-top">
+              <span class="game-tag soon">PRÓXIMAMENTE</span>
+              <span class="game-icon">🧩</span>
+            </div>
+            <h3>Puzzle</h3>
+            <p>Resuelve rompecabezas visuales y avanza por niveles.</p>
+            <button disabled class="game-btn disabled-btn">Muy pronto</button>
+          </article>
+        </div>
       </section>
 
-      <section class="games-grid">
-        <article class="game-card featured">
-          <div class="game-top">
-            <span class="game-tag reward">RECOMPENSA</span>
-            <span class="game-icon">🎁</span>
+      <section class="section-block">
+        <div class="section-header">
+          <div>
+            <h3>🎲 Riesgo y multiplicadores</h3>
+            <p>
+              Usa tus monedas para intentar ganar más. Aquí no aparecerán anuncios,
+              porque ya estás arriesgando tu saldo.
+            </p>
           </div>
-          <h3>Bonus diario</h3>
-          <p>Reclama una recompensa diaria para aumentar tu saldo.</p>
-          <button id="dailyBonusBtn" class="game-btn">Reclamar bonus</button>
-        </article>
+        </div>
 
-        <article class="game-card">
-          <div class="game-top">
-            <span class="game-tag luck">SUERTE</span>
-            <span class="game-icon">🎡</span>
-          </div>
-          <h3>Ruleta</h3>
-          <p>Prueba tu suerte y consigue una recompensa aleatoria.</p>
-          <button id="rouletteBtn" class="game-btn secondary">Jugar ruleta</button>
-        </article>
+        <div class="games-grid">
+          <article class="game-card risk risky">
+            <div class="game-top">
+              <span class="game-tag risk">RIESGO</span>
+              <span class="game-icon">💥</span>
+            </div>
+            <h3>Doble o nada</h3>
+            <p>Arriesga tus monedas y trata de duplicarlas en un solo intento.</p>
+            <button id="doubleBtn" class="game-btn warning">Entrar al reto</button>
+          </article>
 
-        <article class="game-card">
-          <div class="game-top">
-            <span class="game-tag quiz">QUIZ</span>
-            <span class="game-icon">🎬</span>
-          </div>
-          <h3>Quiz de películas</h3>
-          <p>Responde preguntas, sube de nivel y gana monedas.</p>
-          <button id="quizBtn" class="game-btn secondary">Jugar quiz</button>
-        </article>
+          <article class="game-card risk disabled">
+            <div class="game-top">
+              <span class="game-tag risk">RIESGO</span>
+              <span class="game-icon">🎰</span>
+            </div>
+            <h3>Cofre misterioso</h3>
+            <p>Abre un cofre y descubre si ganas más monedas o las pierdes.</p>
+            <button disabled class="game-btn disabled-btn">Muy pronto</button>
+          </article>
 
-        <article class="game-card risky">
-          <div class="game-top">
-            <span class="game-tag risk">RIESGO</span>
-            <span class="game-icon">💥</span>
-          </div>
-          <h3>Doble o nada</h3>
-          <p>Arriesga tus monedas para intentar multiplicarlas.</p>
-          <button id="doubleBtn" class="game-btn warning">Entrar al reto</button>
-        </article>
-
-        <article class="game-card disabled">
-          <div class="game-top">
-            <span class="game-tag soon">PRÓXIMAMENTE</span>
-            <span class="game-icon">🧠</span>
-          </div>
-          <h3>Memory</h3>
-          <p>Encuentra parejas y supera niveles cada vez más difíciles.</p>
-          <button disabled class="game-btn disabled-btn">Muy pronto</button>
-        </article>
-
-        <article class="game-card disabled">
-          <div class="game-top">
-            <span class="game-tag soon">PRÓXIMAMENTE</span>
-            <span class="game-icon">🧩</span>
-          </div>
-          <h3>Puzzle</h3>
-          <p>Resuelve rompecabezas visuales y desbloquea recompensas.</p>
-          <button disabled class="game-btn disabled-btn">Muy pronto</button>
-        </article>
+          <article class="game-card risk disabled">
+            <div class="game-top">
+              <span class="game-tag risk">RIESGO</span>
+              <span class="game-icon">🃏</span>
+            </div>
+            <h3>Carta oculta</h3>
+            <p>Elige una carta y descubre si multiplicas tu apuesta.</p>
+            <button disabled class="game-btn disabled-btn">Muy pronto</button>
+          </article>
+        </div>
       </section>
 
       <section class="info-panel">
         <div class="info-card">
           <h4>💡 Cómo funciona</h4>
           <p>
-            Juega para ganar monedas, acumúlalas y decide si gastarlas en películas
-            individuales o en acceso premium dentro de la plataforma principal.
+            Gana monedas en los juegos de progreso y úsalas en películas,
+            acceso premium o en juegos de riesgo para intentar multiplicarlas.
           </p>
         </div>
 
         <div class="info-card">
-          <h4>🔥 Consejo</h4>
+          <h4>⚠️ Importante</h4>
           <p>
-            Algunos juegos te darán monedas, otros te permitirán arriesgarlas para
-            ganar más. Gestiona tu saldo con inteligencia.
+            Los juegos de ganar monedas pueden incluir anuncios o sistemas de recompensa.
+            Los juegos de riesgo no llevarán anuncios para no romper la experiencia.
           </p>
         </div>
       </section>

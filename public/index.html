@@ -1,159 +1,598 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-  >
-  <title>Arcade Ofica</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-</head>
-<body>
-  <div class="app-shell">
-    <!-- HOME -->
-    <section id="homeScreen" class="screen active">
-      <header class="topbar">
-        <div class="brand">
-          <div class="brand-badge">🎮</div>
-          <div>
-            <h1>Arcade Ofica</h1>
-            <p>Juega, gana monedas y arriesga para multiplicarlas</p>
-          </div>
-        </div>
+const express = require('express');
+const { Telegraf } = require('telegraf');
+const cors = require('cors');
+const path = require('path');
+const supabase = require('./supabase');
 
-        <div class="balance-pill">
-          <span class="balance-icon">💰</span>
-          <span id="balanceValue">0</span>
-        </div>
-      </header>
+const BOT_TOKEN = process.env.BOT_TOKEN;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const WEBAPP_URL = process.env.WEBAPP_URL;
+const MOVIES_BOT_URL = process.env.MOVIES_BOT_URL;
+const OFFICIAL_WEB_URL = process.env.OFFICIAL_WEB_URL;
+const PORT = process.env.PORT || 8080;
 
-      <main class="main-content">
-        <section class="hero-card">
-          <div class="hero-text">
-            <span class="hero-label">CENTRO DE JUEGOS</span>
-            <h2 id="welcomeTitle">Bienvenido</h2>
-            <p>
-              Supera retos, consigue monedas y úsalas para películas,
-              acceso premium o juegos de riesgo.
-            </p>
-          </div>
+const DOUBLE_GAME_COST = 1;
+const DAILY_BONUS_REWARD = 3;
 
-          <div class="hero-side">
-            <div class="hero-mini-card">
-              <span class="mini-label">Modo actual</span>
-              <strong>Arcade conectado</strong>
-            </div>
-          </div>
-        </section>
+if (!BOT_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('Faltan BOT_TOKEN, SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY');
+  process.exit(1);
+}
 
-        <section class="section-block">
-          <div class="section-header">
-            <div>
-              <h3>🟢 Ganar monedas</h3>
-              <p>Juegos de progreso y recompensa.</p>
-            </div>
-          </div>
+console.log('Servidor iniciando...');
+console.log('PORT:', PORT);
+console.log('MOVIES_BOT_URL:', MOVIES_BOT_URL);
+console.log('WEBAPP_URL:', WEBAPP_URL);
+console.log('OFFICIAL_WEB_URL:', OFFICIAL_WEB_URL);
 
-          <div class="games-grid">
-            <article class="game-card earn featured">
-              <div class="game-top">
-                <span class="game-tag reward">RECOMPENSA</span>
-                <span class="game-icon">🎁</span>
-              </div>
-              <h3>Bonus diario</h3>
-              <p>Reclama una recompensa cada día para aumentar tu saldo.</p>
-              <button id="dailyBonusBtn" class="game-btn">Reclamar bonus</button>
-            </article>
+const app = express();
+const bot = new Telegraf(BOT_TOKEN);
 
-            <article class="game-card earn">
-              <div class="game-top">
-                <span class="game-tag quiz">NIVELES</span>
-                <span class="game-icon">🎬</span>
-              </div>
-              <h3>Quiz de películas</h3>
-              <p>Próximamente: responde preguntas y sube de nivel.</p>
-              <button id="quizBtn" class="game-btn secondary">Próximamente</button>
-            </article>
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-            <article class="game-card earn">
-              <div class="game-top">
-                <span class="game-tag luck">RECOMPENSA</span>
-                <span class="game-icon">🎡</span>
-              </div>
-              <h3>Ruleta diaria</h3>
-              <p>Próximamente: gira para obtener una recompensa aleatoria.</p>
-              <button id="rouletteBtn" class="game-btn secondary">Próximamente</button>
-            </article>
-          </div>
-        </section>
+app.get('/health', (req, res) => {
+  res.status(200).json({ ok: true, status: 'running' });
+});
 
-        <section class="section-block">
-          <div class="section-header">
-            <div>
-              <h3>🎲 Riesgo y multiplicadores</h3>
-              <p>Usa tus monedas para intentar ganar más.</p>
-            </div>
-          </div>
+app.get('/', (req, res) => {
+  res.send('Ofica Hub funcionando');
+});
 
-          <div class="games-grid">
-            <article class="game-card risk risky">
-              <div class="game-top">
-                <span class="game-tag risk">RIESGO</span>
-                <span class="game-icon">💥</span>
-              </div>
-              <h3>Doble o nada</h3>
-              <p>Elige cara o cruz. Si aciertas, ganas. Si fallas, pierdes.</p>
-              <button id="doubleBtn" class="game-btn warning">Jugar ahora</button>
-            </article>
-          </div>
-        </section>
-      </main>
-    </section>
+// =========================
+// REGISTRAR USUARIO
+// =========================
+async function registerUserIfNeeded(ctx) {
+  try {
+    const telegram_id = ctx.from?.id;
+    const username = ctx.from?.username || null;
+    const first_name = ctx.from?.first_name || null;
 
-    <!-- DOBLE O NADA -->
-    <section id="doubleScreen" class="screen game-screen">
-      <div class="game-header">
-        <button id="backFromDoubleBtn" class="back-btn">← Volver</button>
-        <div class="game-balance">
-          💰 <span id="doubleBalanceValue">0</span>
-        </div>
-      </div>
+    if (!telegram_id) return null;
 
-      <div class="double-container">
-        <div class="double-card">
-          <span class="double-label">DOBLE O NADA</span>
-          <h2>Lanza la moneda</h2>
-          <p class="double-description">
-            Elige <strong>cara</strong> o <strong>cruz</strong>.  
-            Jugar cuesta <strong>1 moneda</strong>.
-          </p>
+    const { data: existingUser, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegram_id)
+      .maybeSingle();
 
-          <div class="coin-stage">
-            <div id="coin" class="coin">
-              <div class="coin-face coin-front">CARA</div>
-              <div class="coin-face coin-back">CRUZ</div>
-            </div>
-          </div>
+    if (error) {
+      console.error('Error buscando usuario:', error.message);
+      return null;
+    }
 
-          <div class="choice-buttons">
-            <button class="choice-btn" data-choice="cara">🪙 Cara</button>
-            <button class="choice-btn" data-choice="cruz">🪙 Cruz</button>
-          </div>
+    if (existingUser) return existingUser;
 
-          <div id="doubleStatus" class="double-status">
-            Elige una opción para empezar.
-          </div>
+    const { data: newUser, error: insertError } = await supabase
+      .from('users')
+      .insert([
+        {
+          telegram_id,
+          username,
+          first_name,
+          coins: 0
+        }
+      ])
+      .select()
+      .single();
 
-          <button id="playAgainBtn" class="game-btn warning hidden">
-            Volver a jugar
-          </button>
-        </div>
-      </div>
-    </section>
-  </div>
+    if (insertError) {
+      console.error('Error creando usuario:', insertError.message);
+      return null;
+    }
 
-  <script src="app.js"></script>
-</body>
-</html>
+    await supabase.from('transactions').insert([
+      {
+        telegram_id,
+        type: 'register',
+        amount: 0,
+        description: 'Registro inicial del usuario',
+        source: 'hub_bot'
+      }
+    ]);
+
+    return newUser;
+  } catch (error) {
+    console.error('Error registrando usuario:', error.message);
+    return null;
+  }
+}
+
+// =========================
+// OBTENER SALDO
+// =========================
+async function getUserBalance(telegramId) {
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('coins')
+      .eq('telegram_id', telegramId)
+      .maybeSingle();
+
+    if (error || !user) return 0;
+    return user.coins || 0;
+  } catch (error) {
+    console.error('Error obteniendo saldo:', error.message);
+    return 0;
+  }
+}
+
+// =========================
+// BONUS DIARIO
+// =========================
+async function claimDailyBonus(telegramId) {
+  try {
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegramId)
+      .maybeSingle();
+
+    if (userError || !user) {
+      return { ok: false, error: 'Usuario no encontrado' };
+    }
+
+    const now = new Date();
+    const lastBonus = user.last_daily_bonus_at ? new Date(user.last_daily_bonus_at) : null;
+
+    if (lastBonus) {
+      const sameDay =
+        now.getUTCFullYear() === lastBonus.getUTCFullYear() &&
+        now.getUTCMonth() === lastBonus.getUTCMonth() &&
+        now.getUTCDate() === lastBonus.getUTCDate();
+
+      if (sameDay) {
+        return {
+          ok: false,
+          error: 'Ya reclamaste tu bonus diario hoy',
+          balance: user.coins
+        };
+      }
+    }
+
+    const newBalance = user.coins + DAILY_BONUS_REWARD;
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        coins: newBalance,
+        last_daily_bonus_at: now.toISOString(),
+        updated_at: now.toISOString()
+      })
+      .eq('telegram_id', telegramId);
+
+    if (updateError) {
+      console.error('Error actualizando bonus:', updateError.message);
+      return { ok: false, error: 'No se pudo reclamar el bonus' };
+    }
+
+    await supabase.from('transactions').insert([
+      {
+        telegram_id: telegramId,
+        type: 'daily_bonus',
+        amount: DAILY_BONUS_REWARD,
+        description: 'Bonus diario reclamado desde hub',
+        source: 'hub_bot'
+      }
+    ]);
+
+    return {
+      ok: true,
+      reward: DAILY_BONUS_REWARD,
+      balance: newBalance
+    };
+  } catch (error) {
+    console.error('Error en claimDailyBonus:', error.message);
+    return { ok: false, error: 'Error interno reclamando bonus' };
+  }
+}
+
+// =========================
+// DOBLE O NADA
+// =========================
+app.post('/api/double-or-nothing', async (req, res) => {
+  try {
+    const { telegram_id } = req.body;
+
+    if (!telegram_id) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Falta telegram_id'
+      });
+    }
+
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegram_id)
+      .maybeSingle();
+
+    if (userError) {
+      console.error('Error buscando usuario en doble o nada:', userError.message);
+      return res.status(500).json({
+        ok: false,
+        error: 'Error buscando usuario'
+      });
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    if (user.coins < DOUBLE_GAME_COST) {
+      return res.status(400).json({
+        ok: false,
+        error: 'No tienes monedas suficientes para jugar',
+        balance: user.coins
+      });
+    }
+
+    // 45% ganar, 55% perder
+    const win = Math.random() < 0.45;
+
+    let newBalance = user.coins - DOUBLE_GAME_COST;
+    let reward = 0;
+
+    if (win) {
+      reward = 2;
+      newBalance += reward;
+    }
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        coins: newBalance,
+        updated_at: new Date().toISOString()
+      })
+      .eq('telegram_id', telegram_id);
+
+    if (updateError) {
+      console.error('Error actualizando saldo en doble o nada:', updateError.message);
+      return res.status(500).json({
+        ok: false,
+        error: 'No se pudo actualizar el saldo'
+      });
+    }
+
+    await supabase.from('transactions').insert([
+      {
+        telegram_id,
+        type: win ? 'double_win' : 'double_lose',
+        amount: win ? 1 : -1,
+        description: win
+          ? 'Ganó en doble o nada (45%)'
+          : 'Perdió en doble o nada (55%)',
+        source: 'games_webapp'
+      }
+    ]);
+
+    return res.json({
+      ok: true,
+      win,
+      reward,
+      cost: DOUBLE_GAME_COST,
+      balance: newBalance,
+      message: win
+        ? `🎉 Has ganado. Recibes ${reward} monedas`
+        : '💥 Has perdido tu moneda'
+    });
+  } catch (error) {
+    console.error('Error en /api/double-or-nothing:', error.message);
+    return res.status(500).json({
+      ok: false,
+      error: 'Error interno del servidor'
+    });
+  }
+});
+
+// =========================
+// API PARA WEBAPPS
+// =========================
+app.post('/api/auth/telegram', async (req, res) => {
+  try {
+    const { telegram_id, username, first_name } = req.body;
+
+    if (!telegram_id) {
+      return res.status(400).json({ ok: false, error: 'Falta telegram_id' });
+    }
+
+    const { data: existingUser, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegram_id)
+      .maybeSingle();
+
+    if (error) {
+      return res.status(500).json({ ok: false, error: 'Error buscando usuario' });
+    }
+
+    if (existingUser) {
+      return res.json({ ok: true, user: existingUser });
+    }
+
+    const { data: newUser, error: insertError } = await supabase
+      .from('users')
+      .insert([
+        {
+          telegram_id,
+          username: username || null,
+          first_name: first_name || null,
+          coins: 0
+        }
+      ])
+      .select()
+      .single();
+
+    if (insertError) {
+      return res.status(500).json({ ok: false, error: 'Error creando usuario' });
+    }
+
+    return res.json({ ok: true, user: newUser });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ ok: false, error: 'Error interno' });
+  }
+});
+
+app.get('/api/balance/:telegramId', async (req, res) => {
+  try {
+    const telegramId = req.params.telegramId;
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('coins, premium_until')
+      .eq('telegram_id', telegramId)
+      .maybeSingle();
+
+    if (error || !user) {
+      return res.status(404).json({ ok: false, error: 'Usuario no encontrado' });
+    }
+
+    return res.json({
+      ok: true,
+      balance: user.coins,
+      premium_until: user.premium_until
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ ok: false, error: 'Error interno' });
+  }
+});
+
+app.post('/api/daily-bonus', async (req, res) => {
+  try {
+    const { telegram_id } = req.body;
+    const result = await claimDailyBonus(telegram_id);
+
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+
+    return res.json(result);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ ok: false, error: 'Error interno' });
+  }
+});
+
+// =========================
+// TECLADO PRINCIPAL
+// =========================
+function buildMainKeyboard() {
+  const rows = [];
+
+  if (MOVIES_BOT_URL && MOVIES_BOT_URL.trim() !== '') {
+    rows.push([
+      {
+        text: '🎬 Películas',
+        web_app: {
+          url: MOVIES_BOT_URL
+        }
+      }
+    ]);
+  }
+
+  if (WEBAPP_URL && WEBAPP_URL.trim() !== '') {
+    rows.push([
+      {
+        text: '🎮 Abrir juegos',
+        web_app: {
+          url: WEBAPP_URL
+        }
+      }
+    ]);
+  }
+
+  if (OFFICIAL_WEB_URL && OFFICIAL_WEB_URL.trim() !== '') {
+    rows.push([
+      {
+        text: '🌐 Web oficial',
+        web_app: {
+          url: OFFICIAL_WEB_URL
+        }
+      }
+    ]);
+  }
+
+  rows.push([
+    { text: '💰 Ver saldo', callback_data: 'view_balance' },
+    { text: '🎁 Bonus diario', callback_data: 'claim_bonus' }
+  ]);
+
+  return { inline_keyboard: rows };
+}
+
+// =========================
+// MENÚ PRINCIPAL
+// =========================
+async function sendMainMenu(ctx) {
+  const balance = await getUserBalance(ctx.from.id);
+
+  const text = `🎮 *Ofica Hub*
+
+💰 Saldo actual: *${balance} monedas*
+
+Accede desde aquí a todo tu ecosistema.`;
+
+  await ctx.reply(text, {
+    parse_mode: 'Markdown',
+    reply_markup: buildMainKeyboard()
+  });
+}
+
+// =========================
+// COMANDOS
+// =========================
+bot.start(async (ctx) => {
+  try {
+    await registerUserIfNeeded(ctx);
+    await sendMainMenu(ctx);
+  } catch (error) {
+    console.error('Error en /start:', error);
+    await ctx.reply('❌ Error cargando el menú principal');
+  }
+});
+
+bot.command('saldo', async (ctx) => {
+  try {
+    await registerUserIfNeeded(ctx);
+    const balance = await getUserBalance(ctx.from.id);
+    await ctx.reply(`💰 Tu saldo actual es: ${balance} monedas`);
+  } catch (error) {
+    console.error('Error en /saldo:', error);
+    await ctx.reply('❌ Error consultando saldo');
+  }
+});
+
+bot.command('bonus', async (ctx) => {
+  try {
+    await registerUserIfNeeded(ctx);
+    const result = await claimDailyBonus(ctx.from.id);
+
+    if (!result.ok) {
+      return ctx.reply(`❌ ${result.error}\n💰 Saldo actual: ${result.balance ?? 0}`);
+    }
+
+    return ctx.reply(`🎁 Has ganado ${result.reward} monedas\n💰 Nuevo saldo: ${result.balance}`);
+  } catch (error) {
+    console.error('Error en /bonus:', error);
+    await ctx.reply('❌ Error reclamando bonus');
+  }
+});
+
+bot.command('peliculas', async (ctx) => {
+  try {
+    if (!MOVIES_BOT_URL || MOVIES_BOT_URL.trim() === '') {
+      return ctx.reply('❌ La miniapp de películas no está configurada');
+    }
+
+    await ctx.reply('🎬 Abre la miniapp de películas:', {
+      reply_markup: {
+        inline_keyboard: [[
+          {
+            text: '🎬 Abrir películas',
+            web_app: {
+              url: MOVIES_BOT_URL
+            }
+          }
+        ]]
+      }
+    });
+  } catch (error) {
+    console.error('Error en /peliculas:', error);
+    await ctx.reply('❌ Error abriendo la miniapp de películas');
+  }
+});
+
+bot.command('juegos', async (ctx) => {
+  try {
+    if (!WEBAPP_URL || WEBAPP_URL.trim() === '') {
+      return ctx.reply('❌ La web de juegos no está configurada');
+    }
+
+    await ctx.reply('🎮 Abre los juegos:', {
+      reply_markup: {
+        inline_keyboard: [[
+          {
+            text: '🎮 Abrir juegos',
+            web_app: {
+              url: WEBAPP_URL
+            }
+          }
+        ]]
+      }
+    });
+  } catch (error) {
+    console.error('Error en /juegos:', error);
+    await ctx.reply('❌ Error abriendo juegos');
+  }
+});
+
+bot.command('web', async (ctx) => {
+  try {
+    if (!OFFICIAL_WEB_URL || OFFICIAL_WEB_URL.trim() === '') {
+      return ctx.reply('❌ La web oficial no está configurada');
+    }
+
+    await ctx.reply('🌐 Abre la web oficial:', {
+      reply_markup: {
+        inline_keyboard: [[
+          {
+            text: '🌐 Abrir web oficial',
+            web_app: {
+              url: OFFICIAL_WEB_URL
+            }
+          }
+        ]]
+      }
+    });
+  } catch (error) {
+    console.error('Error en /web:', error);
+    await ctx.reply('❌ Error abriendo la web oficial');
+  }
+});
+
+// =========================
+// CALLBACKS
+// =========================
+bot.action('view_balance', async (ctx) => {
+  try {
+    const balance = await getUserBalance(ctx.from.id);
+    await ctx.answerCbQuery(`💰 Tienes ${balance} monedas`);
+  } catch (error) {
+    console.error('Error en view_balance:', error);
+    await ctx.answerCbQuery('Error consultando saldo');
+  }
+});
+
+bot.action('claim_bonus', async (ctx) => {
+  try {
+    const result = await claimDailyBonus(ctx.from.id);
+
+    if (!result.ok) {
+      return ctx.answerCbQuery(result.error, { show_alert: true });
+    }
+
+    await ctx.answerCbQuery(`+${result.reward} monedas`, { show_alert: true });
+    await ctx.reply(`🎁 Bonus diario reclamado\n💰 Nuevo saldo: ${result.balance}`);
+  } catch (error) {
+    console.error('Error en claim_bonus:', error);
+    await ctx.answerCbQuery('Error reclamando bonus', { show_alert: true });
+  }
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Servidor en puerto ${PORT}`);
+});
+
+bot.launch()
+  .then(() => console.log('Ofica Hub iniciado'))
+  .catch((error) => console.error('Error iniciando bot:', error.message));
+
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));

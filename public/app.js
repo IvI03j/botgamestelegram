@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const telegramUser = tg?.initDataUnsafe?.user;
 
-  const API_BASE = 'https://botneflixtelegram.fly.dev';
+  const API_BASE = '';
 
   if (telegramUser?.first_name) {
     welcomeTitle.textContent = `Bienvenido, ${telegramUser.first_name}`;
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (data.ok) {
         updateBalance(data.balance);
-        alert(`🎁 ${data.message}\n💰 Saldo actual: ${data.balance}`);
+        alert(`🎁 ${data.message || `Has ganado ${data.reward} monedas`}\n💰 Saldo actual: ${data.balance}`);
       } else {
         alert(`❌ ${data.error}`);
       }
@@ -114,16 +114,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  doubleBtn.addEventListener('click', async () => {
+    try {
+      if (!telegramUser?.id) {
+        alert('No se pudo obtener tu usuario de Telegram');
+        return;
+      }
+
+      const confirmPlay = confirm('¿Quieres jugar a Doble o Nada por 1 moneda?');
+
+      if (!confirmPlay) return;
+
+      const res = await fetch(`${API_BASE}/api/double-or-nothing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          telegram_id: telegramUser.id
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        updateBalance(data.balance);
+        alert(`${data.message}\n💰 Saldo actual: ${data.balance}`);
+      } else {
+        alert(`❌ ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error jugando doble o nada:', error);
+      alert('❌ Error al jugar');
+    }
+  });
+
   rouletteBtn.addEventListener('click', () => {
     alert('🎡 Próximamente: ruleta diaria');
   });
 
   quizBtn.addEventListener('click', () => {
     alert('🎬 Próximamente: quiz por niveles');
-  });
-
-  doubleBtn.addEventListener('click', () => {
-    alert('💥 Próximamente: doble o nada');
   });
 
   await registerOrLoadUser();

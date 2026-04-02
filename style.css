@@ -1,0 +1,111 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #111;
+  color: #fff;
+}
+
+.app {
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.topbar p {
+  margin: 4px 0 0;
+  color: #bbb;
+  font-size: 14px;
+}
+
+.balance-box {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: bold;
+  color: #ffd54a;
+  min-width: 90px;
+  text-align: center;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.welcome-card,
+.info-box,
+.game-card {
+  background: #1a1a1a;
+  border: 1px solid #2b2b2b;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.welcome-card h2,
+.info-box h3,
+.game-card h3 {
+  margin-top: 0;
+}
+
+.welcome-card p,
+.info-box p,
+.game-card p {
+  color: #ccc;
+  line-height: 1.4;
+}
+
+.games-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.game-card button {
+  margin-top: 12px;
+  width: 100%;
+  background: #e50914;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.game-card button:hover {
+  opacity: 0.95;
+}
+
+.game-card.disabled {
+  opacity: 0.65;
+}
+
+.game-card.disabled button {
+  background: #444;
+  cursor: not-allowed;
+}
+
+@media (min-width: 768px) {
+  .games-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

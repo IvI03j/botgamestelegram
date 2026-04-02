@@ -135,7 +135,9 @@ async function claimDailyBonus(telegramId) {
     }
 
     const now = new Date();
-    const lastBonus = user.last_daily_bonus_at ? new Date(user.last_daily_bonus_at) : null;
+    const lastBonus = user.last_daily_bonus_at
+      ? new Date(user.last_daily_bonus_at)
+      : null;
 
     if (lastBonus) {
       const sameDay =
@@ -232,7 +234,8 @@ app.post('/api/double-or-nothing', async (req, res) => {
       });
     }
 
-    const win = Math.random() < 0.5;
+    // 45% ganar, 55% perder
+    const win = Math.random() < 0.45;
 
     let newBalance = user.coins - DOUBLE_GAME_COST;
     let reward = 0;
@@ -263,7 +266,9 @@ app.post('/api/double-or-nothing', async (req, res) => {
         telegram_id,
         type: win ? 'double_win' : 'double_lose',
         amount: win ? 1 : -1,
-        description: win ? 'Ganó en doble o nada' : 'Perdió en doble o nada',
+        description: win
+          ? 'Ganó en doble o nada (45%)'
+          : 'Perdió en doble o nada (55%)',
         source: 'games_webapp'
       }
     ]);

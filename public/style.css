@@ -15,6 +15,7 @@
   --green: #33d17a;
   --blue: #5b8cff;
   --orange: #ff8c42;
+  --purple: #8c5bff;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
@@ -34,7 +35,7 @@ body {
 }
 
 .app-shell {
-  max-width: 1100px;
+  max-width: 1180px;
   margin: 0 auto;
   padding: 18px;
 }
@@ -135,7 +136,7 @@ body {
   margin: 0;
   color: var(--muted);
   line-height: 1.6;
-  max-width: 650px;
+  max-width: 700px;
 }
 
 .hero-side {
@@ -158,22 +159,21 @@ body {
   margin-bottom: 6px;
 }
 
-.section-title-row {
+.section-block {
   display: flex;
-  justify-content: space-between;
-  align-items: end;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.section-title-row h3 {
+.section-header h3 {
+  margin: 0 0 6px;
+  font-size: 24px;
+}
+
+.section-header p {
   margin: 0;
-  font-size: 22px;
-}
-
-.section-subtitle {
   color: var(--muted);
-  font-size: 14px;
+  line-height: 1.5;
 }
 
 .games-grid {
@@ -194,6 +194,14 @@ body {
 .game-card:hover {
   transform: translateY(-3px);
   border-color: rgba(255, 255, 255, 0.16);
+}
+
+.game-card.earn {
+  border-left: 4px solid rgba(51, 209, 122, 0.8);
+}
+
+.game-card.risk {
+  border-left: 4px solid rgba(255, 140, 66, 0.9);
 }
 
 .game-card.featured {

@@ -8,7 +8,7 @@ const BOT_TOKEN = process.env.BOT_TOKEN;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const WEBAPP_URL = process.env.WEBAPP_URL;
-const MOVIES_WEBAPP_URL = process.env.MOVIES_WEBAPP_URL;
+const MOVIES_BOT_URL = process.env.MOVIES_BOT_URL;
 const OFFICIAL_WEB_URL = process.env.OFFICIAL_WEB_URL;
 const PORT = process.env.PORT || 8080;
 
@@ -19,7 +19,7 @@ if (!BOT_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 
 console.log('Servidor iniciando...');
 console.log('PORT:', PORT);
-console.log('MOVIES_WEBAPP_URL:', MOVIES_WEBAPP_URL);
+console.log('MOVIES_BOT_URL:', MOVIES_BOT_URL);
 console.log('WEBAPP_URL:', WEBAPP_URL);
 console.log('OFFICIAL_WEB_URL:', OFFICIAL_WEB_URL);
 
@@ -189,17 +189,107 @@ async function claimDailyBonus(telegramId) {
 }
 
 // =========================
+// API PARA WEBAPPS
+// =========================
+app.post('/api/auth/telegram', async (req, res) => {
+  try {
+    const { telegram_id, username, first_name } = req.body;
+
+    if (!telegram_id) {
+      return res.status(400).json({ ok: false, error: 'Falta telegram_id' });
+    }
+
+    const { data: existingUser, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegram_id)
+      .maybeSingle();
+
+    if (error) {
+      return res.status(500).json({ ok: false, error: 'Error buscando usuario' });
+    }
+
+    if (existingUser) {
+      return res.json({ ok: true, user: existingUser });
+    }
+
+    const { data: newUser, error: insertError } = await supabase
+      .from('users')
+      .insert([
+        {
+          telegram_id,
+          username: username || null,
+          first_name: first_name || null,
+          coins: 0
+        }
+      ])
+      .select()
+      .single();
+
+    if (insertError) {
+      return res.status(500).json({ ok: false, error: 'Error creando usuario' });
+    }
+
+    return res.json({ ok: true, user: newUser });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ ok: false, error: 'Error interno' });
+  }
+});
+
+app.get('/api/balance/:telegramId', async (req, res) => {
+  try {
+    const telegramId = req.params.telegramId;
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('coins, premium_until')
+      .eq('telegram_id', telegramId)
+      .maybeSingle();
+
+    if (error || !user) {
+      return res.status(404).json({ ok: false, error: 'Usuario no encontrado' });
+    }
+
+    return res.json({
+      ok: true,
+      balance: user.coins,
+      premium_until: user.premium_until
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ ok: false, error: 'Error interno' });
+  }
+});
+
+app.post('/api/daily-bonus', async (req, res) => {
+  try {
+    const { telegram_id } = req.body;
+    const result = await claimDailyBonus(telegram_id);
+
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+
+    return res.json(result);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ ok: false, error: 'Error interno' });
+  }
+});
+
+// =========================
 // TECLADO PRINCIPAL
 // =========================
 function buildMainKeyboard() {
   const rows = [];
 
-  if (MOVIES_WEBAPP_URL && MOVIES_WEBAPP_URL.trim() !== '') {
+  if (MOVIES_BOT_URL && MOVIES_BOT_URL.trim() !== '') {
     rows.push([
       {
         text: '🎬 Películas',
         web_app: {
-          url: MOVIES_WEBAPP_URL
+          url: MOVIES_BOT_URL
         }
       }
     ]);
@@ -295,7 +385,7 @@ bot.command('bonus', async (ctx) => {
 
 bot.command('peliculas', async (ctx) => {
   try {
-    if (!MOVIES_WEBAPP_URL || MOVIES_WEBAPP_URL.trim() === '') {
+    if (!MOVIES_BOT_URL || MOVIES_BOT_URL.trim() === '') {
       return ctx.reply('❌ La miniapp de películas no está configurada');
     }
 
@@ -305,7 +395,7 @@ bot.command('peliculas', async (ctx) => {
           {
             text: '🎬 Abrir películas',
             web_app: {
-              url: MOVIES_WEBAPP_URL
+              url: MOVIES_BOT_URL
             }
           }
         ]]

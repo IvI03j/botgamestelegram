@@ -1,13 +1,14 @@
 const express = require('express');
 const { Telegraf } = require('telegraf');
 const cors = require('cors');
+const path = require('path');
 const supabase = require('./supabase');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const WEBAPP_URL = process.env.WEBAPP_URL;
-const MOVIES_BOT_URL = process.env.MOVIES_BOT_URL;
+const MOVIES_WEBAPP_URL = process.env.MOVIES_WEBAPP_URL;
 const OFFICIAL_WEB_URL = process.env.OFFICIAL_WEB_URL;
 const PORT = process.env.PORT || 8080;
 
@@ -21,13 +22,14 @@ const bot = new Telegraf(BOT_TOKEN);
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/health', (req, res) => {
   res.status(200).json({ ok: true, status: 'running' });
 });
 
 app.get('/', (req, res) => {
-  res.send('Bot principal funcionando');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // =========================
@@ -167,19 +169,148 @@ async function claimDailyBonus(telegramId) {
 }
 
 // =========================
-// MENÚ PRINCIPAL
+// API PARA LA WEB
+// =========================
+app.post('/api/auth/telegram', async (req, res) => {
+  try {
+    const { telegram_id, username, first_name } = req.body;
+
+    if (!telegram_id) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Falta telegram_id'
+      });
+    }
+
+    const { data: existingUser, error: selectError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegram_id)
+      .maybeSingle();
+
+    if (selectError) {
+      return res.status(500).json({
+        ok: false,
+        error: 'Error buscando usuario'
+      });
+    }
+
+    let user;
+
+    if (!existingUser) {
+      const { data: newUser, error: insertError } = await supabase
+        .from('users')
+        .insert([
+          {
+            telegram_id,
+            username: username || null,
+            first_name: first_name || null,
+            coins: 0
+          }
+        ])
+        .select()
+        .single();
+
+      if (insertError) {
+        return res.status(500).json({
+          ok: false,
+          error: 'Error creando usuario'
+        });
+      }
+
+      user = newUser;
+
+      await supabase.from('transactions').insert([
+        {
+          telegram_id,
+          type: 'register',
+          amount: 0,
+          description: 'Registro inicial del usuario',
+          source: 'webapp'
+        }
+      ]);
+    } else {
+      user = existingUser;
+    }
+
+    return res.json({
+      ok: true,
+      user
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      ok: false,
+      error: 'Error interno'
+    });
+  }
+});
+
+app.get('/api/balance/:telegramId', async (req, res) => {
+  try {
+    const telegramId = req.params.telegramId;
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('coins, premium_until')
+      .eq('telegram_id', telegramId)
+      .maybeSingle();
+
+    if (error || !user) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    return res.json({
+      ok: true,
+      balance: user.coins,
+      premium_until: user.premium_until
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      ok: false,
+      error: 'Error interno'
+    });
+  }
+});
+
+app.post('/api/daily-bonus', async (req, res) => {
+  try {
+    const { telegram_id } = req.body;
+
+    const result = await claimDailyBonus(telegram_id);
+
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+
+    return res.json(result);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      ok: false,
+      error: 'Error interno'
+    });
+  }
+});
+
+// =========================
+// MENÚ PRINCIPAL DEL BOT
 // =========================
 async function sendMainMenu(ctx, extraText = '') {
   const telegramId = ctx.from.id;
   const balance = await getUserBalance(telegramId);
 
-  const text = `🎮 *Bienvenido a tu centro principal*
+  const text = `🎮 *Bienvenido al centro principal*
 
 💰 Saldo actual: *${balance} monedas*
 
-Desde aquí puedes acceder a todo el ecosistema:
+Desde aquí puedes acceder a todo:
 
-• 🎬 Bot de películas
+• 🎬 Películas
 • 🎮 Juegos
 • 🌐 Web oficial
 • 🎁 Bonus diario
@@ -193,15 +324,17 @@ ${extraText}`.trim();
       inline_keyboard: [
         [
           {
-            text: '🎬 Bot de películas',
-            url: MOVIES_BOT_URL || 'https://t.me/'
+            text: '🎬 Películas',
+            web_app: {
+              url: MOVIES_WEBAPP_URL
+            }
           }
         ],
         [
           {
             text: '🎮 Abrir juegos',
             web_app: {
-              url: WEBAPP_URL || 'https://indexwebofica.fly.dev'
+              url: WEBAPP_URL
             }
           }
         ],
@@ -209,7 +342,7 @@ ${extraText}`.trim();
           {
             text: '🌐 Web oficial',
             web_app: {
-              url: OFFICIAL_WEB_URL || 'https://indexwebofica.fly.dev'
+              url: OFFICIAL_WEB_URL
             }
           }
         ],
@@ -228,26 +361,17 @@ ${extraText}`.trim();
   });
 }
 
-// =========================
-// START
-// =========================
 bot.start(async (ctx) => {
   await registerUserIfNeeded(ctx);
   await sendMainMenu(ctx);
 });
 
-// =========================
-// COMANDO SALDO
-// =========================
 bot.command('saldo', async (ctx) => {
   await registerUserIfNeeded(ctx);
   const balance = await getUserBalance(ctx.from.id);
   await ctx.reply(`💰 Tu saldo actual es: ${balance} monedas`);
 });
 
-// =========================
-// COMANDO BONUS
-// =========================
 bot.command('bonus', async (ctx) => {
   await registerUserIfNeeded(ctx);
 
@@ -260,9 +384,54 @@ bot.command('bonus', async (ctx) => {
   return ctx.reply(`🎁 Has ganado ${result.reward} monedas\n💰 Nuevo saldo: ${result.balance}`);
 });
 
-// =========================
-// CALLBACKS
-// =========================
+bot.command('peliculas', async (ctx) => {
+  await registerUserIfNeeded(ctx);
+  await ctx.reply('🎬 Abre la miniapp de películas desde el botón:', {
+    reply_markup: {
+      inline_keyboard: [[
+        {
+          text: '🎬 Abrir películas',
+          web_app: {
+            url: MOVIES_WEBAPP_URL
+          }
+        }
+      ]]
+    }
+  });
+});
+
+bot.command('juegos', async (ctx) => {
+  await registerUserIfNeeded(ctx);
+  await ctx.reply('🎮 Abre los juegos desde el botón:', {
+    reply_markup: {
+      inline_keyboard: [[
+        {
+          text: '🎮 Abrir juegos',
+          web_app: {
+            url: WEBAPP_URL
+          }
+        }
+      ]]
+    }
+  });
+});
+
+bot.command('web', async (ctx) => {
+  await registerUserIfNeeded(ctx);
+  await ctx.reply('🌐 Abre la web oficial desde el botón:', {
+    reply_markup: {
+      inline_keyboard: [[
+        {
+          text: '🌐 Abrir web oficial',
+          web_app: {
+            url: OFFICIAL_WEB_URL
+          }
+        }
+      ]]
+    }
+  });
+});
+
 bot.action('view_balance', async (ctx) => {
   try {
     await registerUserIfNeeded(ctx);
@@ -292,9 +461,6 @@ bot.action('claim_bonus', async (ctx) => {
   }
 });
 
-// =========================
-// ARRANCAR
-// =========================
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Servidor en puerto ${PORT}`);
 });

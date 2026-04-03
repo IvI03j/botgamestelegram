@@ -14,6 +14,17 @@ const PORT = process.env.PORT || 8080;
 
 const DOUBLE_GAME_COST = 1;
 const DAILY_BONUS_REWARD = 3;
+const WORDLE_REWARD_EVERY = 10;
+const WORDLE_REWARD_COINS = 1;
+
+const WORDLE_WORDS = [
+  'perro', 'gatos', 'cielo', 'nieve', 'playa',
+  'ronda', 'fuego', 'nubes', 'fruta', 'limon',
+  'panel', 'mango', 'carta', 'barco', 'raton',
+  'libro', 'silla', 'tenis', 'queso', 'piano',
+  'tigre', 'avion', 'campo', 'rutas', 'metal',
+  'cabra', 'dulce', 'verde', 'negro', 'blusa'
+];
 
 if (!BOT_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error('Faltan BOT_TOKEN, SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY');
@@ -72,7 +83,9 @@ async function registerUserIfNeeded(ctx) {
           telegram_id,
           username,
           first_name,
-          coins: 0
+          coins: 0,
+          wordle_level: 1,
+          wordle_last_reward_level: 0
         }
       ])
       .select()
@@ -234,7 +247,6 @@ app.post('/api/double-or-nothing', async (req, res) => {
       });
     }
 
-    // 45% ganar, 55% perder
     const win = Math.random() < 0.45;
 
     let newBalance = user.coins - DOUBLE_GAME_COST;
@@ -293,6 +305,177 @@ app.post('/api/double-or-nothing', async (req, res) => {
 });
 
 // =========================
+// WORDLE
+// =========================
+app.get('/api/wordle-state/:telegramId', async (req, res) => {
+  try {
+    const telegramId = req.params.telegramId;
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('wordle_level, wordle_last_reward_level, coins')
+      .eq('telegram_id', telegramId)
+      .maybeSingle();
+
+    if (error || !user) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    const level = user.wordle_level || 1;
+    const word = WORDLE_WORDS[(level - 1) % WORDLE_WORDS.length];
+
+    return res.json({
+      ok: true,
+      level,
+      wordLength: word.length,
+      balance: user.coins
+    });
+  } catch (error) {
+    console.error('Error en /api/wordle-state:', error.message);
+    return res.status(500).json({
+      ok: false,
+      error: 'Error interno'
+    });
+  }
+});
+
+app.post('/api/wordle-submit', async (req, res) => {
+  try {
+    const { telegram_id, guess } = req.body;
+
+    if (!telegram_id || !guess) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Faltan datos'
+      });
+    }
+
+    const normalizedGuess = String(guess).toLowerCase().trim();
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegram_id)
+      .maybeSingle();
+
+    if (error || !user) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    const currentLevel = user.wordle_level || 1;
+    const currentRewardLevel = user.wordle_last_reward_level || 0;
+    const targetWord = WORDLE_WORDS[(currentLevel - 1) % WORDLE_WORDS.length];
+
+    if (normalizedGuess.length !== targetWord.length) {
+      return res.status(400).json({
+        ok: false,
+        error: `La palabra debe tener ${targetWord.length} letras`
+      });
+    }
+
+    const result = [];
+    const targetArray = targetWord.split('');
+    const guessArray = normalizedGuess.split('');
+    const used = Array(targetArray.length).fill(false);
+
+    // verdes
+    for (let i = 0; i < guessArray.length; i++) {
+      if (guessArray[i] === targetArray[i]) {
+        result[i] = 'correct';
+        used[i] = true;
+      }
+    }
+
+    // amarillos/grises
+    for (let i = 0; i < guessArray.length; i++) {
+      if (result[i]) continue;
+
+      let foundIndex = -1;
+      for (let j = 0; j < targetArray.length; j++) {
+        if (!used[j] && guessArray[i] === targetArray[j]) {
+          foundIndex = j;
+          break;
+        }
+      }
+
+      if (foundIndex >= 0) {
+        result[i] = 'present';
+        used[foundIndex] = true;
+      } else {
+        result[i] = 'absent';
+      }
+    }
+
+    const win = normalizedGuess === targetWord;
+    let newLevel = currentLevel;
+    let newBalance = user.coins;
+    let reward = 0;
+    let rewardedNow = false;
+
+    if (win) {
+      newLevel = currentLevel + 1;
+
+      if (newLevel % WORDLE_REWARD_EVERY === 0 && currentRewardLevel < newLevel) {
+        reward = WORDLE_REWARD_COINS;
+        newBalance += reward;
+        rewardedNow = true;
+      }
+
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          wordle_level: newLevel,
+          wordle_last_reward_level: rewardedNow ? newLevel : currentRewardLevel,
+          coins: newBalance,
+          updated_at: new Date().toISOString()
+        })
+        .eq('telegram_id', telegram_id);
+
+      if (updateError) {
+        return res.status(500).json({
+          ok: false,
+          error: 'No se pudo guardar el progreso'
+        });
+      }
+
+      await supabase.from('transactions').insert([
+        {
+          telegram_id,
+          type: 'wordle_win',
+          amount: reward,
+          description: rewardedNow
+            ? `Nivel Wordle completado. Recompensa por nivel ${newLevel}`
+            : `Nivel Wordle completado sin recompensa`,
+          source: 'games_webapp'
+        }
+      ]);
+    }
+
+    return res.json({
+      ok: true,
+      win,
+      result,
+      reward,
+      balance: newBalance,
+      level: newLevel,
+      nextRewardAt: Math.ceil(newLevel / WORDLE_REWARD_EVERY) * WORDLE_REWARD_EVERY
+    });
+  } catch (error) {
+    console.error('Error en /api/wordle-submit:', error.message);
+    return res.status(500).json({
+      ok: false,
+      error: 'Error interno del servidor'
+    });
+  }
+});
+
+// =========================
 // API PARA WEBAPPS
 // =========================
 app.post('/api/auth/telegram', async (req, res) => {
@@ -324,7 +507,9 @@ app.post('/api/auth/telegram', async (req, res) => {
           telegram_id,
           username: username || null,
           first_name: first_name || null,
-          coins: 0
+          coins: 0,
+          wordle_level: 1,
+          wordle_last_reward_level: 0
         }
       ])
       .select()

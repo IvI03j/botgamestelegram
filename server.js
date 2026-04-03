@@ -14,8 +14,42 @@ const PORT = process.env.PORT || 8080;
 
 const DOUBLE_GAME_COST = 1;
 const DAILY_BONUS_REWARD = 3;
+const QUIZ_REWARD = 1;
 const WORDLE_REWARD_EVERY = 10;
 const WORDLE_REWARD_COINS = 1;
+
+const QUIZ_QUESTIONS = [
+  {
+    id: 1,
+    question: '¿Qué película tiene al personaje Jack Sparrow?',
+    options: ['Titanic', 'Piratas del Caribe', 'Avatar', 'Gladiator'],
+    correctIndex: 1
+  },
+  {
+    id: 2,
+    question: '¿En qué saga aparece Hogwarts?',
+    options: ['Star Wars', 'Harry Potter', 'El Señor de los Anillos', 'Matrix'],
+    correctIndex: 1
+  },
+  {
+    id: 3,
+    question: '¿Qué película popular tiene un villano llamado Thanos?',
+    options: ['Avengers', 'Joker', 'Deadpool', 'John Wick'],
+    correctIndex: 0
+  },
+  {
+    id: 4,
+    question: '¿Qué película trata sobre un naufragio famoso?',
+    options: ['Titanic', 'Avatar', 'Coco', 'Frozen'],
+    correctIndex: 0
+  },
+  {
+    id: 5,
+    question: '¿Qué personaje dice “Yo soy tu padre”?',
+    options: ['Batman', 'Darth Vader', 'Shrek', 'Iron Man'],
+    correctIndex: 1
+  }
+];
 
 const WORDLE_WORDS = [
   'perro', 'gatos', 'cielo', 'nieve', 'playa',
@@ -148,9 +182,7 @@ async function claimDailyBonus(telegramId) {
     }
 
     const now = new Date();
-    const lastBonus = user.last_daily_bonus_at
-      ? new Date(user.last_daily_bonus_at)
-      : null;
+    const lastBonus = user.last_daily_bonus_at ? new Date(user.last_daily_bonus_at) : null;
 
     if (lastBonus) {
       const sameDay =
@@ -305,6 +337,113 @@ app.post('/api/double-or-nothing', async (req, res) => {
 });
 
 // =========================
+// QUIZ
+// =========================
+app.get('/api/quiz-question', async (req, res) => {
+  try {
+    const randomIndex = Math.floor(Math.random() * QUIZ_QUESTIONS.length);
+    const question = QUIZ_QUESTIONS[randomIndex];
+
+    return res.json({
+      ok: true,
+      question: {
+        id: question.id,
+        question: question.question,
+        options: question.options
+      }
+    });
+  } catch (error) {
+    console.error('Error en /api/quiz-question:', error.message);
+    return res.status(500).json({
+      ok: false,
+      error: 'No se pudo cargar la pregunta'
+    });
+  }
+});
+
+app.post('/api/quiz-answer', async (req, res) => {
+  try {
+    const { telegram_id, question_id, answer_index } = req.body;
+
+    if (!telegram_id || question_id === undefined || answer_index === undefined) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Faltan datos para responder la pregunta'
+      });
+    }
+
+    const question = QUIZ_QUESTIONS.find(q => q.id === question_id);
+
+    if (!question) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Pregunta no encontrada'
+      });
+    }
+
+    const isCorrect = Number(answer_index) === Number(question.correctIndex);
+
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('telegram_id', telegram_id)
+      .maybeSingle();
+
+    if (userError || !user) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    let newBalance = user.coins;
+
+    if (isCorrect) {
+      newBalance += QUIZ_REWARD;
+
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          coins: newBalance,
+          updated_at: new Date().toISOString()
+        })
+        .eq('telegram_id', telegram_id);
+
+      if (updateError) {
+        return res.status(500).json({
+          ok: false,
+          error: 'No se pudo actualizar el saldo'
+        });
+      }
+
+      await supabase.from('transactions').insert([
+        {
+          telegram_id,
+          type: 'quiz_win',
+          amount: QUIZ_REWARD,
+          description: 'Respuesta correcta en quiz',
+          source: 'games_webapp'
+        }
+      ]);
+    }
+
+    return res.json({
+      ok: true,
+      correct: isCorrect,
+      correctIndex: question.correctIndex,
+      reward: isCorrect ? QUIZ_REWARD : 0,
+      balance: newBalance
+    });
+  } catch (error) {
+    console.error('Error en /api/quiz-answer:', error.message);
+    return res.status(500).json({
+      ok: false,
+      error: 'Error interno del servidor'
+    });
+  }
+});
+
+// =========================
 // WORDLE
 // =========================
 app.get('/api/wordle-state/:telegramId', async (req, res) => {
@@ -384,7 +523,6 @@ app.post('/api/wordle-submit', async (req, res) => {
     const guessArray = normalizedGuess.split('');
     const used = Array(targetArray.length).fill(false);
 
-    // verdes
     for (let i = 0; i < guessArray.length; i++) {
       if (guessArray[i] === targetArray[i]) {
         result[i] = 'correct';
@@ -392,7 +530,6 @@ app.post('/api/wordle-submit', async (req, res) => {
       }
     }
 
-    // amarillos/grises
     for (let i = 0; i < guessArray.length; i++) {
       if (result[i]) continue;
 

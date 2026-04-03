@@ -48,7 +48,7 @@
             </div>
           </div>
 
-          <div class="games-grid">
+          <div class="games-grid" id="earnGamesGrid">
             <article class="game-card earn featured">
               <div class="game-top">
                 <span class="game-tag reward">RECOMPENSA</span>
@@ -61,12 +61,12 @@
 
             <article class="game-card earn">
               <div class="game-top">
-                <span class="game-tag quiz">NIVELES</span>
+                <span class="game-tag quiz">QUIZ</span>
                 <span class="game-icon">🎬</span>
               </div>
               <h3>Quiz de películas</h3>
-              <p>Próximamente: responde preguntas y sube de nivel.</p>
-              <button id="quizBtn" class="game-btn secondary">Próximamente</button>
+              <p>Responde correctamente para ganar monedas.</p>
+              <button id="quizBtn" class="game-btn secondary">Jugar quiz</button>
             </article>
 
             <article class="game-card earn">
@@ -139,6 +139,72 @@
 
           <button id="playAgainBtn" class="game-btn warning hidden">
             Volver a jugar
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section id="quizScreen" class="screen game-screen">
+      <div class="game-header">
+        <button id="backFromQuizBtn" class="back-btn">← Volver</button>
+        <div class="game-balance">
+          💰 <span id="quizBalanceValue">0</span>
+        </div>
+      </div>
+
+      <div class="double-container">
+        <div class="double-card">
+          <span class="double-label">QUIZ DE PELÍCULAS</span>
+          <h2 id="quizQuestionTitle">Cargando pregunta...</h2>
+          <p class="double-description">Responde correctamente para ganar 1 moneda.</p>
+
+          <div id="quizOptions" class="quiz-options"></div>
+
+          <div id="quizStatus" class="double-status">
+            Elige una respuesta.
+          </div>
+
+          <button id="nextQuizBtn" class="game-btn secondary hidden">
+            Siguiente pregunta
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section id="wordleScreen" class="screen game-screen">
+      <div class="game-header">
+        <button id="backFromWordleBtn" class="back-btn">← Volver</button>
+        <div class="game-balance">
+          💰 <span id="wordleBalanceValue">0</span>
+        </div>
+      </div>
+
+      <div class="double-container">
+        <div class="double-card">
+          <span class="double-label">WORDLE EN CASTELLANO</span>
+          <h2 id="wordleLevelTitle">Nivel 1</h2>
+          <p class="double-description">
+            Adivina la palabra. Cada 10 niveles ganados consigues 1 moneda.
+          </p>
+
+          <div id="wordleBoard" class="wordle-board"></div>
+
+          <input
+            type="text"
+            id="wordleInput"
+            class="wordle-input"
+            maxlength="5"
+            placeholder="Escribe una palabra"
+          >
+
+          <button id="wordleSubmitBtn" class="game-btn secondary">Probar palabra</button>
+
+          <div id="wordleStatus" class="double-status">
+            Tienes 6 intentos.
+          </div>
+
+          <button id="nextWordleBtn" class="game-btn warning hidden">
+            Siguiente nivel
           </button>
         </div>
       </div>

@@ -98,10 +98,6 @@ body {
   box-shadow: var(--shadow);
 }
 
-.balance-icon {
-  font-size: 18px;
-}
-
 .main-content {
   display: flex;
   flex-direction: column;
@@ -143,21 +139,6 @@ body {
   margin: 0;
   color: var(--muted);
   line-height: 1.6;
-}
-
-.hero-mini-card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 14px 16px;
-  min-width: 180px;
-}
-
-.mini-label {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
-  margin-bottom: 6px;
 }
 
 .section-block {
@@ -282,7 +263,6 @@ body {
   color: #fff;
 }
 
-/* GAME SCREEN */
 .game-screen {
   min-height: calc(100vh - 36px);
 }
@@ -420,6 +400,82 @@ body {
   color: var(--muted);
   line-height: 1.5;
   font-size: 16px;
+}
+
+.quiz-options {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.quiz-option-btn {
+  background: #222633;
+  color: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  text-align: left;
+}
+
+.quiz-option-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.wordle-board {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0;
+}
+
+.wordle-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.wordle-cell {
+  height: 52px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  font-weight: bold;
+  font-size: 20px;
+  background: #1b1f2a;
+  color: white;
+  text-transform: uppercase;
+}
+
+.wordle-cell.correct {
+  background: #33d17a;
+  color: #08130d;
+}
+
+.wordle-cell.present {
+  background: #ffcc33;
+  color: #2d2200;
+}
+
+.wordle-cell.absent {
+  background: #4a4f5f;
+  color: #fff;
+}
+
+.wordle-input {
+  width: 100%;
+  background: #1b1f2a;
+  color: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 18px;
+  text-align: center;
+  text-transform: lowercase;
 }
 
 .hidden {

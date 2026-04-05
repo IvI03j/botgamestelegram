@@ -2,7 +2,6 @@ const express = require('express');
 const { Telegraf } = require('telegraf');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
 const supabase = require('./supabase');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -19,8 +18,12 @@ const QUIZ_REWARD = 1;
 const WORDLE_REWARD_EVERY = 10;
 const WORDLE_REWARD_COINS = 1;
 
-const TV_APP_APK_PATH = path.join(__dirname, 'apk', 'ofica-tv.apk');
-const ANDROID_APP_APK_PATH = path.join(__dirname, 'apk', 'ofica-tv.apk');
+// =========================
+// APK EN ALMACENAMIENTO TELEGRAM
+// =========================
+const STORAGE_CHAT_ID = -1003043513364;
+const TV_APP_MESSAGE_ID = 274;
+const ANDROID_APP_MESSAGE_ID = 274;
 
 const QUIZ_QUESTIONS = [
   {
@@ -241,26 +244,20 @@ async function claimDailyBonus(telegramId) {
 }
 
 // =========================
-// ENVIAR APK LOCAL
+// ENVIAR APK DESDE TELEGRAM STORAGE
 // =========================
-async function sendApkFile(ctx, apkPath, captionText) {
+async function sendStoredApp(ctx, messageId, captionText) {
   try {
-    if (!fs.existsSync(apkPath)) {
-      return ctx.reply('❌ El archivo APK no está disponible todavía en el servidor.');
-    }
+    await ctx.reply(captionText);
 
-    await ctx.replyWithDocument(
-      {
-        source: apkPath,
-        filename: path.basename(apkPath)
-      },
-      {
-        caption: captionText
-      }
+    await bot.telegram.copyMessage(
+      ctx.chat.id,
+      STORAGE_CHAT_ID,
+      messageId
     );
   } catch (error) {
-    console.error('Error enviando APK:', error.message);
-    await ctx.reply('❌ No se pudo enviar el APK.');
+    console.error('Error enviando APK desde almacenamiento:', error.message);
+    await ctx.reply('❌ No se pudo enviar la app desde el almacenamiento.');
   }
 }
 
@@ -909,18 +906,18 @@ bot.command('web', async (ctx) => {
 });
 
 bot.command('app', async (ctx) => {
-  await sendApkFile(
+  await sendStoredApp(
     ctx,
-    ANDROID_APP_APK_PATH,
-    '📱 Aquí tienes la app oficial de Ofica para Android.\n\nInstálala y abre la plataforma desde tu móvil.'
+    ANDROID_APP_MESSAGE_ID,
+    '📱 Aquí tienes la app oficial de Ofica para Android.'
   );
 });
 
 bot.command('apptv', async (ctx) => {
-  await sendApkFile(
+  await sendStoredApp(
     ctx,
-    TV_APP_APK_PATH,
-    '📺 Aquí tienes la app oficial de Ofica para Android TV.\n\nSi la vas a instalar en una TV, quizá necesites permitir orígenes desconocidos.'
+    TV_APP_MESSAGE_ID,
+    '📺 Aquí tienes la app oficial de Ofica para Android TV.'
   );
 });
 
@@ -975,29 +972,29 @@ bot.action('claim_bonus', async (ctx) => {
 
 bot.action('download_android_app', async (ctx) => {
   try {
-    await ctx.answerCbQuery('Preparando APK Android...');
-    await sendApkFile(
+    await ctx.answerCbQuery('Preparando app Android...');
+    await sendStoredApp(
       ctx,
-      ANDROID_APP_APK_PATH,
-      '📱 Aquí tienes la app oficial de Ofica para Android.\n\nInstálala y abre la plataforma desde tu móvil.'
+      ANDROID_APP_MESSAGE_ID,
+      '📱 Aquí tienes la app oficial de Ofica para Android.'
     );
   } catch (error) {
     console.error('Error en download_android_app:', error.message);
-    await ctx.answerCbQuery('Error enviando APK', { show_alert: true });
+    await ctx.answerCbQuery('Error enviando la app', { show_alert: true });
   }
 });
 
 bot.action('download_tv_app', async (ctx) => {
   try {
-    await ctx.answerCbQuery('Preparando APK TV...');
-    await sendApkFile(
+    await ctx.answerCbQuery('Preparando app TV...');
+    await sendStoredApp(
       ctx,
-      TV_APP_APK_PATH,
-      '📺 Aquí tienes la app oficial de Ofica para Android TV.\n\nSi la vas a instalar en una TV, quizá necesites permitir orígenes desconocidos.'
+      TV_APP_MESSAGE_ID,
+      '📺 Aquí tienes la app oficial de Ofica para Android TV.'
     );
   } catch (error) {
     console.error('Error en download_tv_app:', error.message);
-    await ctx.answerCbQuery('Error enviando APK', { show_alert: true });
+    await ctx.answerCbQuery('Error enviando la app', { show_alert: true });
   }
 });
 

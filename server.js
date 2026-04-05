@@ -241,7 +241,7 @@ async function claimDailyBonus(telegramId) {
 }
 
 // =========================
-// ENVIAR APK
+// ENVIAR APK LOCAL
 // =========================
 async function sendApkFile(ctx, apkPath, captionText) {
   try {
@@ -922,6 +922,26 @@ bot.command('apptv', async (ctx) => {
     TV_APP_APK_PATH,
     '📺 Aquí tienes la app oficial de Ofica para Android TV.\n\nSi la vas a instalar en una TV, quizá necesites permitir orígenes desconocidos.'
   );
+});
+
+bot.command('getid', async (ctx) => {
+  try {
+    const reply = ctx.message?.reply_to_message;
+
+    if (!reply) {
+      return ctx.reply('❌ Responde al mensaje del APK con /getid');
+    }
+
+    const chatId = ctx.chat?.id;
+    const messageId = reply.message_id;
+
+    await ctx.reply(
+      `📌 IDs del mensaje:\n\nchat_id: ${chatId}\nmessage_id: ${messageId}`
+    );
+  } catch (error) {
+    console.error('Error en /getid:', error.message);
+    await ctx.reply('❌ No se pudieron obtener los IDs');
+  }
 });
 
 // =========================

@@ -10,7 +10,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const WEBAPP_URL = process.env.WEBAPP_URL;
 const MOVIES_BOT_URL = process.env.MOVIES_BOT_URL;
-const INDEXWEBOFICA_URL = process.env.INDEXWEBOFICA_URL;
+const INDEXWEBOFICA_URL = process.env.INDEXWEBOFICA_URL || '';
 const PORT = process.env.PORT || 8080;
 
 const DOUBLE_GAME_COST = 1;
@@ -70,7 +70,7 @@ console.log('Servidor iniciando...');
 console.log('PORT:', PORT);
 console.log('MOVIES_BOT_URL:', MOVIES_BOT_URL);
 console.log('WEBAPP_URL:', WEBAPP_URL);
-console.log('INDEXWEBOFICA_URL:', INDEXWEBOFICA_URL);
+console.log('INDEXWEBOFICA_URL:', INDEXWEBOFICA_URL || '(vacío)');
 
 const app = express();
 const bot = new Telegraf(BOT_TOKEN);
@@ -774,14 +774,13 @@ function buildMainKeyboard() {
     ]);
   }
 
-  if (INDEXWEBOFICA_URL && INDEXWEBOFICA_URL.trim() !== '') {
-    rows.push([
-      {
-        text: '🌐 Web oficial',
-        callback_data: 'open_official_web'
-      }
-    ]);
-  }
+  // Siempre mostrar la web oficial
+  rows.push([
+    {
+      text: '🌐 Web oficial',
+      callback_data: 'open_official_web'
+    }
+  ]);
 
   rows.push([
     { text: '💰 Ver saldo', callback_data: 'view_balance' },
@@ -902,7 +901,7 @@ bot.command('web', async (ctx) => {
     await registerUserIfNeeded(ctx);
 
     if (!INDEXWEBOFICA_URL || INDEXWEBOFICA_URL.trim() === '') {
-      return ctx.reply('❌ La web oficial no está configurada');
+      return ctx.reply('❌ La web oficial no está configurada todavía');
     }
 
     const token = await createWebLoginTokenForTelegramUser(ctx.from.id);
@@ -963,7 +962,7 @@ bot.action('open_official_web', async (ctx) => {
     await registerUserIfNeeded(ctx);
 
     if (!INDEXWEBOFICA_URL || INDEXWEBOFICA_URL.trim() === '') {
-      return ctx.answerCbQuery('La web oficial no está configurada', { show_alert: true });
+      return ctx.answerCbQuery('La web oficial no está configurada todavía', { show_alert: true });
     }
 
     const token = await createWebLoginTokenForTelegramUser(ctx.from.id);

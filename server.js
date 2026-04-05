@@ -2,6 +2,7 @@ const express = require('express');
 const { Telegraf } = require('telegraf');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const supabase = require('./supabase');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -19,7 +20,7 @@ const WORDLE_REWARD_EVERY = 10;
 const WORDLE_REWARD_COINS = 1;
 
 // =========================
-// APK EN ALMACENAMIENTO TELEGRAM
+// APP EN ALMACENAMIENTO TELEGRAM
 // =========================
 const STORAGE_CHAT_ID = -1003043513364;
 const TV_APP_MESSAGE_ID = 274;
@@ -244,20 +245,40 @@ async function claimDailyBonus(telegramId) {
 }
 
 // =========================
-// ENVIAR APK DESDE TELEGRAM STORAGE
+// ENVIAR APP DESDE ALMACENAMIENTO TELEGRAM
 // =========================
 async function sendStoredApp(ctx, messageId, captionText) {
   try {
     await ctx.reply(captionText);
 
-    await bot.telegram.copyMessage(
-      ctx.chat.id,
-      STORAGE_CHAT_ID,
-      messageId
-    );
+    try {
+      const copied = await bot.telegram.copyMessage(
+        ctx.chat.id,
+        STORAGE_CHAT_ID,
+        messageId
+      );
+      console.log('APK copiado correctamente:', copied);
+      return;
+    } catch (copyError) {
+      console.error('copyMessage falló:', copyError.response?.description || copyError.message);
+
+      const forwarded = await bot.telegram.forwardMessage(
+        ctx.chat.id,
+        STORAGE_CHAT_ID,
+        messageId
+      );
+      console.log('APK reenviado correctamente:', forwarded);
+      return;
+    }
   } catch (error) {
-    console.error('Error enviando APK desde almacenamiento:', error.message);
-    await ctx.reply('❌ No se pudo enviar la app desde el almacenamiento.');
+    console.error('Error enviando APK desde almacenamiento:');
+    console.error('message:', error.message);
+    console.error('description:', error.response?.description);
+    console.error('full error:', error);
+
+    await ctx.reply(
+      `❌ No se pudo enviar la app desde el almacenamiento.\n\n${error.response?.description || error.message}`
+    );
   }
 }
 

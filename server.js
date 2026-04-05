@@ -2,6 +2,7 @@ const express = require('express');
 const { Telegraf } = require('telegraf');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const supabase = require('./supabase');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -17,6 +18,9 @@ const DAILY_BONUS_REWARD = 3;
 const QUIZ_REWARD = 1;
 const WORDLE_REWARD_EVERY = 10;
 const WORDLE_REWARD_COINS = 1;
+
+const TV_APP_APK_PATH = path.join(__dirname, 'apk', 'ofica-tv.apk');
+const ANDROID_APP_APK_PATH = path.join(__dirname, 'apk', 'ofica-tv.apk');
 
 const QUIZ_QUESTIONS = [
   {
@@ -233,6 +237,30 @@ async function claimDailyBonus(telegramId) {
   } catch (error) {
     console.error('Error en claimDailyBonus:', error.message);
     return { ok: false, error: 'Error interno reclamando bonus' };
+  }
+}
+
+// =========================
+// ENVIAR APK
+// =========================
+async function sendApkFile(ctx, apkPath, captionText) {
+  try {
+    if (!fs.existsSync(apkPath)) {
+      return ctx.reply('❌ El archivo APK no está disponible todavía en el servidor.');
+    }
+
+    await ctx.replyWithDocument(
+      {
+        source: apkPath,
+        filename: path.basename(apkPath)
+      },
+      {
+        caption: captionText
+      }
+    );
+  } catch (error) {
+    console.error('Error enviando APK:', error.message);
+    await ctx.reply('❌ No se pudo enviar el APK.');
   }
 }
 
@@ -742,6 +770,11 @@ function buildMainKeyboard() {
   ]);
 
   rows.push([
+    { text: '📱 App Android', callback_data: 'download_android_app' },
+    { text: '📺 App TV', callback_data: 'download_tv_app' }
+  ]);
+
+  rows.push([
     { text: '💰 Ver saldo', callback_data: 'view_balance' },
     { text: '🎁 Bonus diario', callback_data: 'claim_bonus' }
   ]);
@@ -875,6 +908,22 @@ bot.command('web', async (ctx) => {
   }
 });
 
+bot.command('app', async (ctx) => {
+  await sendApkFile(
+    ctx,
+    ANDROID_APP_APK_PATH,
+    '📱 Aquí tienes la app oficial de Ofica para Android.\n\nInstálala y abre la plataforma desde tu móvil.'
+  );
+});
+
+bot.command('apptv', async (ctx) => {
+  await sendApkFile(
+    ctx,
+    TV_APP_APK_PATH,
+    '📺 Aquí tienes la app oficial de Ofica para Android TV.\n\nSi la vas a instalar en una TV, quizá necesites permitir orígenes desconocidos.'
+  );
+});
+
 // =========================
 // CALLBACKS
 // =========================
@@ -901,6 +950,34 @@ bot.action('claim_bonus', async (ctx) => {
   } catch (error) {
     console.error('Error en claim_bonus:', error);
     await ctx.answerCbQuery('Error reclamando bonus', { show_alert: true });
+  }
+});
+
+bot.action('download_android_app', async (ctx) => {
+  try {
+    await ctx.answerCbQuery('Preparando APK Android...');
+    await sendApkFile(
+      ctx,
+      ANDROID_APP_APK_PATH,
+      '📱 Aquí tienes la app oficial de Ofica para Android.\n\nInstálala y abre la plataforma desde tu móvil.'
+    );
+  } catch (error) {
+    console.error('Error en download_android_app:', error.message);
+    await ctx.answerCbQuery('Error enviando APK', { show_alert: true });
+  }
+});
+
+bot.action('download_tv_app', async (ctx) => {
+  try {
+    await ctx.answerCbQuery('Preparando APK TV...');
+    await sendApkFile(
+      ctx,
+      TV_APP_APK_PATH,
+      '📺 Aquí tienes la app oficial de Ofica para Android TV.\n\nSi la vas a instalar en una TV, quizá necesites permitir orígenes desconocidos.'
+    );
+  } catch (error) {
+    console.error('Error en download_tv_app:', error.message);
+    await ctx.answerCbQuery('Error enviando APK', { show_alert: true });
   }
 });
 

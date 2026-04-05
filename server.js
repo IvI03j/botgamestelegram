@@ -2,6 +2,7 @@ const express = require('express');
 const { Telegraf } = require('telegraf');
 const cors = require('cors');
 const path = require('path');
+const crypto = require('crypto');
 const supabase = require('./supabase');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -9,7 +10,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const WEBAPP_URL = process.env.WEBAPP_URL;
 const MOVIES_BOT_URL = process.env.MOVIES_BOT_URL;
-const OFFICIAL_WEB_URL = process.env.OFFICIAL_WEB_URL;
+const INDEXWEBOFICA_URL = process.env.INDEXWEBOFICA_URL;
 const PORT = process.env.PORT || 8080;
 
 const DOUBLE_GAME_COST = 1;
@@ -69,7 +70,7 @@ console.log('Servidor iniciando...');
 console.log('PORT:', PORT);
 console.log('MOVIES_BOT_URL:', MOVIES_BOT_URL);
 console.log('WEBAPP_URL:', WEBAPP_URL);
-console.log('OFFICIAL_WEB_URL:', OFFICIAL_WEB_URL);
+console.log('INDEXWEBOFICA_URL:', INDEXWEBOFICA_URL);
 
 const app = express();
 const bot = new Telegraf(BOT_TOKEN);
@@ -143,6 +144,47 @@ async function registerUserIfNeeded(ctx) {
     return newUser;
   } catch (error) {
     console.error('Error registrando usuario:', error.message);
+    return null;
+  }
+}
+
+// =========================
+// TOKEN LOGIN WEB INDEX
+// =========================
+async function createWebLoginTokenForTelegramUser(telegramId) {
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, telegram_id')
+      .eq('telegram_id', telegramId)
+      .maybeSingle();
+
+    if (error || !user) {
+      console.error('No se pudo encontrar usuario para token web:', error?.message);
+      return null;
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    const { error: insertError } = await supabase
+      .from('web_login_tokens')
+      .insert([
+        {
+          user_id: user.id,
+          token,
+          expires_at: expiresAt
+        }
+      ]);
+
+    if (insertError) {
+      console.error('Error insertando token web:', insertError.message);
+      return null;
+    }
+
+    return token;
+  } catch (error) {
+    console.error('Error creando token web:', error.message);
     return null;
   }
 }
@@ -732,13 +774,11 @@ function buildMainKeyboard() {
     ]);
   }
 
-  if (OFFICIAL_WEB_URL && OFFICIAL_WEB_URL.trim() !== '') {
+  if (INDEXWEBOFICA_URL && INDEXWEBOFICA_URL.trim() !== '') {
     rows.push([
       {
         text: '🌐 Web oficial',
-        web_app: {
-          url: OFFICIAL_WEB_URL
-        }
+        callback_data: 'open_official_web'
       }
     ]);
   }
@@ -859,18 +899,26 @@ bot.command('juegos', async (ctx) => {
 
 bot.command('web', async (ctx) => {
   try {
-    if (!OFFICIAL_WEB_URL || OFFICIAL_WEB_URL.trim() === '') {
+    await registerUserIfNeeded(ctx);
+
+    if (!INDEXWEBOFICA_URL || INDEXWEBOFICA_URL.trim() === '') {
       return ctx.reply('❌ La web oficial no está configurada');
     }
+
+    const token = await createWebLoginTokenForTelegramUser(ctx.from.id);
+
+    if (!token) {
+      return ctx.reply('❌ No se pudo generar el acceso web');
+    }
+
+    const url = `${INDEXWEBOFICA_URL}/auth?t=${token}`;
 
     await ctx.reply('🌐 Abre la web oficial:', {
       reply_markup: {
         inline_keyboard: [[
           {
             text: '🌐 Abrir web oficial',
-            web_app: {
-              url: OFFICIAL_WEB_URL
-            }
+            url
           }
         ]]
       }
@@ -907,6 +955,40 @@ bot.action('claim_bonus', async (ctx) => {
   } catch (error) {
     console.error('Error en claim_bonus:', error);
     await ctx.answerCbQuery('Error reclamando bonus', { show_alert: true });
+  }
+});
+
+bot.action('open_official_web', async (ctx) => {
+  try {
+    await registerUserIfNeeded(ctx);
+
+    if (!INDEXWEBOFICA_URL || INDEXWEBOFICA_URL.trim() === '') {
+      return ctx.answerCbQuery('La web oficial no está configurada', { show_alert: true });
+    }
+
+    const token = await createWebLoginTokenForTelegramUser(ctx.from.id);
+
+    if (!token) {
+      return ctx.answerCbQuery('No se pudo generar el acceso web', { show_alert: true });
+    }
+
+    const url = `${INDEXWEBOFICA_URL}/auth?t=${token}`;
+
+    await ctx.reply('🌐 Abre la web oficial desde este botón:', {
+      reply_markup: {
+        inline_keyboard: [[
+          {
+            text: '🌐 Abrir web oficial',
+            url
+          }
+        ]]
+      }
+    });
+
+    await ctx.answerCbQuery('Enlace generado');
+  } catch (error) {
+    console.error('Error en open_official_web:', error);
+    await ctx.answerCbQuery('Error generando acceso', { show_alert: true });
   }
 });
 
